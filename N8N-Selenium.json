@@ -1,0 +1,753 @@
+{
+  "name": "N8N-Selenium",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auto-fill",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "rawBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "19f2f7cd-8097-41b6-aa01-14545512d24a",
+      "name": "Webhook",
+      "webhookId": "d72ce818-d374-46e5-b71e-53486b4676c2"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        736,
+        0
+      ],
+      "id": "724e623d-57dd-4264-8678-f91843fce217",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "zCojEhQwQxQZCpBJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.folderId }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        0
+      ],
+      "id": "54d5ae2f-c029-414a-8ea3-be8959ead0a0",
+      "name": "Search and get file xlsx",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "zCojEhQwQxQZCpBJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {
+          "includeEmptyCells": true
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        0
+      ],
+      "id": "51cc5da4-d128-4441-985f-43bde2ab05af",
+      "name": "Read file"
+    },
+    {
+      "parameters": {
+        "jsCode": "const url = $input.first().json.body.folderLink;\nconst match = url.match(/\\/folders\\/([a-zA-Z0-9_-]+)/);\nif (!match || match.length < 2) throw new Error(\"Invalid Google Drive Folder URL\");\nreturn [{ json: { folderId: match[1] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "f25ce3c3-b41f-4cf1-9866-01d010cc682c",
+      "name": "Cut folderId from link"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst filledItems = [];\n\nlet lastRow = {};\n\nfor (const { json } of items) {\n  const newRow = {};\n\n  for (const key of Object.keys(json)) {\n    const value = json[key];\n    if (value !== undefined && value !== null && value !== '' && value !== 'empty') {\n      newRow[key] = value;\n    } else {\n      newRow[key] = lastRow[key] ?? null;\n    }\n  }\n\n  lastRow = newRow;\n  filledItems.push({ json: newRow });\n}\n\nreturn filledItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "c5523843-6b8c-455e-8be6-7e095170b700",
+      "name": "Fill down data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remove the first row (header mapping)\nitems.shift();\n\nreturn items\n  .filter(item => !!item.json[\"__EMPTY_2\"]) // Optional filter\n  .map(item => {\n    const row = item.json;\n\n    return {\n      json: {\n        invoiceNumber: row[\"__EMPTY_2\"],\n        amount: row[\"__EMPTY_4\"],\n        invoiceCode: row[\"__EMPTY_1\"],\n        taxId: row[\"__EMPTY_8\"]\n      }\n    };\n  });\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "4d7da704-3197-4b99-b8d2-8da16a1fd5b3",
+      "name": "Convert data",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.cmd }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2048,
+        0
+      ],
+      "id": "9ab1ac33-063d-4bba-b2ff-2164cdbd4197",
+      "name": "Execute Command",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.cmd }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3200,
+        -320
+      ],
+      "id": "394bb3d7-22c9-4787-910f-ef4b60ef89f1",
+      "name": "Create file Docx"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/data/outputs/{{ $json.filename }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        3776,
+        -320
+      ],
+      "id": "6f3f977f-186f-45eb-8bed-4cc0ca591da6",
+      "name": "Read/Write Files from Disk",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "root",
+          "mode": "list",
+          "cachedResultName": "/ (Root folder)",
+          "cachedResultUrl": "https://drive.google.com/drive"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4208,
+        -144
+      ],
+      "id": "8b9610a4-aa60-43a3-a411-fde11b444740",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "zCojEhQwQxQZCpBJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f5d04ec7-5a90-4380-96e0-f54e7ec210b3",
+              "leftValue": "={{$json[\"status\"]}}",
+              "rightValue": "\"error\"",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2512,
+        0
+      ],
+      "id": "1bd7da4f-c447-4301-b6c0-965c9a70fec2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.stdout || \"{}\";\n\nlet data;\ntry {\n  // Tìm JSON cuối cùng trong stdout\n  const matches = raw.match(/\\{[\\s\\S]*\\}/g);\n  if (matches && matches.length > 0) {\n    const last = matches[matches.length - 1]; // lấy JSON cuối cùng\n    data = JSON.parse(last);\n  } else {\n    data = { status: \"error\", message: \"Không tìm thấy JSON trong stdout\", results: [] };\n  }\n} catch (e) {\n  data = { status: \"error\", message: \"Output không phải JSON hợp lệ\", results: [] };\n}\n\n// Với Function node → luôn phải return array\nreturn [{ json: data }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2304,
+        0
+      ],
+      "id": "55897ea5-5df7-438f-8d36-f0c65db0d80e",
+      "name": "Get response from py"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2784,
+        208
+      ],
+      "id": "3e82b82b-6885-42ae-88a1-cf749b31a1e6",
+      "name": "Respond False"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"id\": \"={{ $('Upload file').json.id }}\",\n  \"name\": \"={{ $('Upload file').json.name }}\",\n  \"link\": \"={{ $('Upload file').json.webViewLink }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        5456,
+        48
+      ],
+      "id": "eb752d29-1ad4-4962-a9e3-8aa30d21efd1",
+      "name": "Respond Success"
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "writer",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4432,
+        -304
+      ],
+      "id": "119065cc-f43c-42a1-8b6c-3c42a8106f71",
+      "name": "Share file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "zCojEhQwQxQZCpBJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    id: $input.first().json.id,\n    name: $input.first().json.name,\n    link: $input.first().json.webViewLink\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4448,
+        48
+      ],
+      "id": "f7e40809-f854-4fac-8b19-8e7abfdede8a",
+      "name": "Get data file"
+    },
+    {
+      "parameters": {
+        "jsCode": "const name = $input.first().json.name; // e.g. \"bke minh đức.xlsx\"\n\n// Remove the extension \".xlsx\"\nconst newName = name.replace(/\\.xlsx$/i, \"\"); \n\nreturn {\n  json: {\n    newName\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        -352
+      ],
+      "id": "114cec67-213e-4a85-a28e-d38e66591bf6",
+      "name": "Create name file"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2784,
+        -160
+      ],
+      "id": "5f673c6b-3657-4873-ae8c-953660978362",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build payload base64 và command hoàn chỉnh\nconst payload = Buffer\n  .from(JSON.stringify(items.map(i => i.json)))\n  .toString('base64');\n\nconst cmd = \"python3 -u /data/scripts/generate_invoice_doc.py --b64 '\" + payload + \"'\";\n\n// Trả về cho node tiếp theo\nreturn [{ json: { cmd } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3008,
+        -160
+      ],
+      "id": "8447e831-25d9-4725-a932-8609a1d21191",
+      "name": "Make data to PY create file"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build payload base64 và command hoàn chỉnh\nconst payload = Buffer\n  .from(JSON.stringify(items.map(i => i.json)))\n  .toString('base64');\n\nconst cmd = \"python3 -u /data/scripts/fill_invoice_form.py --b64 '\" + payload + \"'\";\n\n// Trả về cho node tiếp theo\nreturn [{ json: { cmd } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        0
+      ],
+      "id": "d813ebd8-2a72-4803-b5ee-0982f91d66aa",
+      "name": "Make data to PY selenium"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3376,
+        -544
+      ],
+      "id": "0de7449b-3cc1-4ca8-9c02-9f07f9bc8222",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4720,
+        144
+      ],
+      "id": "fdb231cb-b881-43aa-b091-c749da6f08b0",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// `items` là mảng input trong n8n Function node\nlet filename = '';\n\n// Duyệt từng phần tử để tìm field stdout\nfor (const item of items) {\n  const stdout = item.json?.stdout;\n  if (stdout) {\n    // Đổi / → \\ nếu bạn muốn xử lý theo kiểu Windows, hoặc giữ nguyên\n    const clean = stdout.replace(/\\\\/g, '/'); // xử lý nếu là path dạng Unix\n    const match = clean.match(/\\/([^\\/\\n\\r]+)$/); // lấy phần sau dấu /\n    if (match) {\n      filename = match[1].trim();\n      break;\n    }\n  }\n}\n\n// Trả về 1 object mới cho node sau\nreturn [\n  {\n    json: {\n      filename\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3584,
+        -544
+      ],
+      "id": "72bc6da3-422f-4ff9-83ab-e943626dd033",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.folderId }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5248,
+        144
+      ],
+      "id": "3346970c-17bb-490d-94b5-3936bc860643",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "zCojEhQwQxQZCpBJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Hợp nhất tất cả json fields từ 2 item thành 1 object\nconst result = {};\n\nfor (const item of items) {\n  Object.assign(result, item.json);\n}\n\nreturn [\n  {\n    json: result\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4928,
+        144
+      ],
+      "id": "afac26d8-f7ce-4f25-95c6-6b0251be1f05",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Cut folderId from link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search and get file xlsx": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Read file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create name file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read file": {
+      "main": [
+        [
+          {
+            "node": "Fill down data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cut folderId from link": {
+      "main": [
+        [
+          {
+            "node": "Search and get file xlsx",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fill down data": {
+      "main": [
+        [
+          {
+            "node": "Convert data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert data": {
+      "main": [
+        [
+          {
+            "node": "Make data to PY selenium",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "Get response from py",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create file Docx": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond False",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get data file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get response from py": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        []
+      ]
+    },
+    "Get data file": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create name file": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Make data to PY create file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make data to PY create file": {
+      "main": [
+        [
+          {
+            "node": "Create file Docx",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make data to PY selenium": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d49e8d8f-8ab3-49f8-9906-d5b906052e76",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4d31e262c10e8e83981fc49f2834cd34715ddb50d27f6633754cdec4e9957fc0"
+  },
+  "id": "CsDzHuVZWPxW8X7i",
+  "tags": []
+}

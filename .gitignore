@@ -1,0 +1,5 @@
+logs
+*.log
+.env
+package-lock.json
+*.lock
