@@ -28,6 +28,31 @@ def clear_and_type(element, text):
     element.send_keys(str(text))
     
 # ===== UTILS =====
+MAX_RETRIES = 3
+
+def is_captcha_error_popup(driver):
+    try:
+        popup = driver.find_element(By.CLASS_NAME, "ant-notification-notice-message")
+        return "captcha không đúng" in popup.text.lower()
+    except:
+        return False
+
+def click_reload_captcha_button(driver):
+    try:
+        reload_btn = driver.find_element(By.CSS_SELECTOR, "button.ant-btn-icon-only")
+        reload_btn.click()
+        print("🔁 Reload captcha clicked")
+    except Exception as e:
+        print(f"⚠️ Không tìm thấy nút reload captcha: {e}")
+
+def delete_captcha_image(invoice_number):
+    try:
+        path = OUTPUT_DIR / f"{invoice_number}_captcha.png"
+        path.unlink(missing_ok=True)
+        print(f"🗑️ Đã xóa captcha cũ: {path}")
+    except Exception as e:
+        print(f"⚠️ Không thể xóa ảnh captcha: {e}", file=sys.stderr)
+
 def read_invoices():
     """Đọc JSON từ stdin (n8n gửi vào)."""
     if '--b64' in sys.argv:
@@ -194,7 +219,7 @@ def main():
                         return  # ❌ DỪNG TOÀN BỘ CHƯƠNG TRÌNH
                 except:
                     pass
-                out_file = OUTPUT_DIR / f"{invoice_number}.png"
+                out_file = OUTPUT_DIR / f"{invoice_number}-{invoice_code}.png"
                 fullpage_screenshot(driver, str(out_file))
 
                 results.append({
