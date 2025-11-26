@@ -227,6 +227,24 @@ def main():
                         msg = no_invoice_msg.text.strip()
 
                         error_file = OUTPUT_DIR / f"{invoice_number}-{invoice_code}.error.png"
+                        try:
+    # chờ spinner biến mất
+    WebDriverWait(driver, 20).until_not(
+        EC.presence_of_element_located((By.CLASS_NAME, "ant-spin-dot"))
+    )
+except:
+    print("⚠️ Loader không biến mất – fallback check...")
+
+try:
+    # chờ text 'Tồn tại hóa đơn ...' xuất hiện
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located(
+            (By.XPATH, "//p[contains(text(),'Tồn tại hóa đơn')]")
+        )
+    )
+except:
+    print("⚠️ Không tìm thấy text xác nhận, có thể vẫn OK")
+
                         fullpage_screenshot(driver, str(error_file))
 
                         invoice_result["status"] = "not_found"
